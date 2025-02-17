@@ -1,0 +1,12 @@
+lsi: false
+safe: true
+source: .
+incremental: false
+highlighter: rouge
+baseurl: "/articles"
+url: "https://sunkejl.github.io"
+gist:
+  noscript: false
+kramdown:
+  math_engine: mathjax
+  syntax_highlighter: rouge
