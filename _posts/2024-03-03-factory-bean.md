@@ -1,13 +1,12 @@
 ---
 layout: post
-title: "Spring Boot 中通过 FactoryBean 进行 Bean 的实例化"
+title: "Spring Boot 通过 FactoryBean 进行 Bean 的实例化"
 date: 2024-03-03 10:00:00 +0800
-tags: [Jekyll, Markdown, 博客]
+tags: [ Jekyll, Markdown, 博客 ]
 author: "孙珂"
 ---
 
-
-# Spring Boot 中通过 FactoryBean 进行 Bean 的实例化
+# Spring Boot 通过 FactoryBean 进行 Bean 的实例化
 
 ## Bean的实例化
 
@@ -16,7 +15,6 @@ Spring 中实例化 Bean 的方法有很多，如通过 @Component 注解、@Bea
 通过 FactoryBean 接口实例化 Bean 的好处是可以将复杂的实例化逻辑封装在相应的实现类中，使得配置更加简洁。
 
 FactoryBean 的抽象类 AbstractFactoryBean 对 FactoryBean 进一步进行了封装，使其具备完整的 Bean 生命周期管理能力。
-
 
 ## 使用 FactoryBean 和 AbstractFactoryBean 分别进行 Bean 的实例化
 
@@ -45,7 +43,6 @@ FactoryBean 接口比较简单，只有 getObject()，getObjectType() 和 isSing
 
 getObject 返回期望的 AlbumService 对象。
 
-
 ```java
 public class MyAlbumFactoryBean implements FactoryBean<AlbumService> {
     @Override
@@ -65,6 +62,7 @@ public class MyAlbumFactoryBean implements FactoryBean<AlbumService> {
 接着使用 @Bean 注解将 MyAlbumFactoryBean 注册到 Spring 容器中。
 
 ```java
+
 @Configuration
 public class AppConfig {
 
@@ -76,7 +74,8 @@ public class AppConfig {
 
 ```
 
-再通过 BeanFactory 来获取相应的 AlbumService，getBean("myAlbumFactoryBean") 拿到 MyAlbumFactoryBean 的 getObject 方法返回的 AlbumService 对象。
+再通过 BeanFactory 来获取相应的 AlbumService，getBean("myAlbumFactoryBean") 拿到 MyAlbumFactoryBean 的 getObject 方法返回的
+AlbumService 对象。
 
 ```java
 
@@ -89,7 +88,6 @@ public void getBean() {
 }
 ```
 
-
 ### 使用 AbstractFactoryBean 进行 Bean 的实例化
 
 AbstractFactoryBean 对 FactoryBean 进行了封装，
@@ -99,7 +97,6 @@ AbstractFactoryBean 对 FactoryBean 进行了封装，
 AbstractFactoryBean 通过 createInstance 封装了 FactoryBean 的 getObject 方法。
 
 同过 @Override afterPropertiesSet 方法，对 Bean 的生命周期进行管理。（上面几个接口的实现都做了类似的事情，如在创建阶段，销毁阶段进行管理）
-
 
 ```java
 
@@ -141,9 +138,7 @@ public class MyAlbumAbstractFactoryBean extends AbstractFactoryBean<AlbumService
 
 ```
 
-
 通过 @Bean 注解将 MyAlbumAbstractFactoryBean 注册到 Spring 容器中。
-
 
 ```java
 
@@ -164,27 +159,27 @@ public class AppConfig {
 
 ```
 
-和上面的 FactoryBean 一样，通过 BeanFactory 来获取相应的 AlbumService，getBean("myAlbumFactoryBean") 拿到 MyAlbumAbstractFactoryBean 返回的 AlbumService 对象。
-
+和上面的 FactoryBean 一样，通过 BeanFactory 来获取相应的 AlbumService，getBean("myAlbumFactoryBean") 拿到
+MyAlbumAbstractFactoryBean 返回的 AlbumService 对象。
 
 ```java
 
 
-        @Autowired
-        private ApplicationContext applicationContext;
+@Autowired
+private ApplicationContext applicationContext;
 
-        public void getBean() {
+public void getBean() {
 
-            AlbumService myAbstractFactoryBeanAlbumService = (AlbumService) applicationContext.getBean("myAlbumAbstractFactoryBean");
-            System.out.println("myAbstractFactoryBeanAlbum " + myAbstractFactoryBeanAlbumService);
-        }
+    AlbumService myAbstractFactoryBeanAlbumService = (AlbumService) applicationContext.getBean("myAlbumAbstractFactoryBean");
+    System.out.println("myAbstractFactoryBeanAlbum " + myAbstractFactoryBeanAlbumService);
+}
 
 ```
 
-## 灵活实现
+## 结合 FactoryBean 统一管理 Bean 的生命周期
 
 可以结合 FactoryBean , BeanClassLoaderAware, BeanFactoryAware, InitializingBean, DisposableBean这些接口，
-根据需要进行组合，来获取 IoC 容器管理 Bean 的生命周期的能力。
+根据需要进行组合，来获取 IoC 容器统一管理 Bean 的生命周期的能力。
 
 ```java
 public class MyAlbumFactoryBean implements FactoryBean<AlbumService>, InitializingBean {
@@ -207,36 +202,55 @@ public class MyAlbumFactoryBean implements FactoryBean<AlbumService>, Initializi
 }
 ```
 
-根据上面的初始化管理，可以测试一下常见的几种初始化方法的执行顺序，依次是@PostConstruct，afterPropertiesSet，@Bean(initMethod = "xxx")
+如果不结合 FactoryBean 进行 Bean 的生命周期管理，就需要在对应类自己实现，
+
+可以测试一下常见的几种初始化和销毁方法的执行顺序，
+初始化的执行顺序依次是@PostConstruct，afterPropertiesSet，@Bean(initMethod = "xxx")
+销毁的执行顺序依次是@preDestroy，DisposableBean，@Bean(destroyMethod = "xxx")
+java标准注解优先，Interface 接口第二，@Bean() 自定义方法第三。
 
 ```java
-public class MyAccountService implements InitializingBean {
+public class MyAccountService implements InitializingBean, DisposableBean {
     @PostConstruct
-    public void init() {
+    public void postConstruct() {
         System.out.println("MyAccountService PostConstruct first init");
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        System.out.println("MyAccountService afterPropertiesSet second init");
+        System.out.println("MyAccountService InitializingBean#afterPropertiesSet second init");
     }
 
-    public void initV1(){
+    public void initFunction() {
         System.out.println("MyAccountService initMethod third init");
+    }
+
+    @PreDestroy
+    public void preDestroy() {
+        System.out.println("MyAccountService preDestroy first destroy");
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        System.out.println("MyAccountService DisposableBean#destroy second destroy");
+
+    }
+
+    public void destroyFunction() {
+        System.out.println("MyAccountService destroyMethod third destroy");
     }
 }
 
 
-@Bean(initMethod = "initV1")
+@Bean(initMethod = "initFunction", destroyMethod = "destroyFunction")
 public MyAccountService myAccountService() {
     return new MyAccountService();
 }
 
 ```
 
-
 ## 结论
 
-通过 FactoryBean 可以对复杂的创建逻辑从@Bean中提取出来，进行封装。
+通过 FactoryBean 可以对复杂的创建逻辑从 @Bean 中提取出来，进行封装。
 
-AbstractFactoryBean 在 FactoryBean 的基础上，进一步扩展，使其具备完整的 Bean 生命周期管理能力。
+AbstractFactoryBean 在 FactoryBean 的基础上，进一步扩展，使其具备统一管理 Bean 生命周期的能力。
