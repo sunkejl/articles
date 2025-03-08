@@ -135,4 +135,4 @@ public class MyAddressInstantiationAwareBeanPostProcessor implements Instantiati
 
 InitializingBean, DisposableBean 接口是控制 Bean 的初始化和销毁的。
 
-BeanPostProcessor(InstantiationAwareBeanPostProcessor) 的 postProcessBeforeInstantiation，postProcessAfterInstantiation 是控制 Bean 的实例化前后的动作。
+BeanPostProcessor(InstantiationAwareBeanPostProcessor) 的 postProcessBeforeInstantiation，postProcessAfterInstantiation 是控制 Bean 的实例化( instantiate )前后的动作。
