@@ -20,6 +20,10 @@ author: "孙珂"
 private AlbumService albumService;
 ```
 
+>@Qualifier annotation 
+>
+>When there are more than one beans of the same type and only one is needed to be wired with a property, the @Qualifier annotation is used along with @Autowired annotation to remove the confusion by specifying which exact bean will be wired.
+
 
 ## 通过 @Qualifier 注解可以进行对 Bean 的分组
 

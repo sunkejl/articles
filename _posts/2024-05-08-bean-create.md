@@ -6,11 +6,109 @@ tags: [ Jekyll, Markdown, 博客 ]
 author: "孙珂"
 ---
 
-#  Spring Boot 通过 BeanPostProcessor 来控制 Bean 的创建
+#  Spring Boot 中 Bean 的创建和销毁
 
 ## createBean 的执行流程
 
 createBean 是 Spring Boot 创建 Bean 的核心方法。
+
+## BeanPostProcessor
+
+自定义 Bean，实现了 InitializingBean，DisposableBean 接口
+
+```java
+@Service
+public class MyHomeService implements InitializingBean, DisposableBean {
+    @PostConstruct
+    public void postConstruct() {
+        System.out.println("MyHomeService PostConstruct first init 2");
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        System.out.println("MyHomeService afterPropertiesSet second init 3");
+    }
+
+    public void initFunction() {
+        System.out.println("MyHomeService initMethod third init");
+    }
+
+    /**
+     * ide find Usages
+     */
+    @PreDestroy
+    public void preDestroy() {
+        System.out.println("MyHomeService DisposableBean first destroy 4");
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        System.out.println("MyHomeService PreDestroy#destroy second destroy 5");
+
+    }
+
+    public void destroyFunction() {
+        System.out.println("MyHomeService PreDestroy third destroy");
+    }
+}
+
+```
+自定义 MyHomeServiceBeanPostProcessor 实现了 BeanPostProcessor 接口
+
+注意 需要和 MyHomeService 分开定义
+```java
+@Component
+public class MyHomeServiceBeanPostProcessor implements BeanPostProcessor {
+    @Override
+    public  Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        if(ObjectUtils.nullSafeEquals(beanName,"myHomeService")){
+            System.out.println("MyHomeServiceHandler postProcessBeforeInitialization 1");
+        }
+        return bean;
+    }
+
+
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        if(ObjectUtils.nullSafeEquals(beanName,"myHomeService")){
+            System.out.println("MyHomeServiceHandler postProcessAfterInitialization 4");
+        }
+        return bean;
+    }
+
+}
+
+
+```
+
+DestructionAwareBeanPostProcessor 接口，处理 DestructionAware 
+
+```java
+@Component
+public class MyHomeServiceDestructionAwarePostProcessor implements DestructionAwareBeanPostProcessor {
+
+
+    @Override
+    public void postProcessBeforeDestruction(Object bean, String beanName) throws BeansException {
+        if(ObjectUtils.nullSafeEquals(beanName,"myHomeService")){
+            System.out.println("MyHomeService DestructionAwareBeanPostProcessor 1");
+        }
+    }
+}
+```
+通过日志，可以看到初始化方法和销毁方法的调用顺序
+```
+MyHomeServiceHandler postProcessBeforeInitialization 1
+MyHomeService PostConstruct first init 2
+MyHomeService afterPropertiesSet second init 3
+MyHomeServiceHandler postProcessAfterInitialization 4
+
+MyHomeService DestructionAwareBeanPostProcessor 1
+MyHomeService PreDestroy destroy 2
+MyHomeService DisposableBean#destroy destroy 3
+```
+
+## InstantiationAwareBeanPostProcessor
 
 InstantiationAwareBeanPostProcessor 是 BeanPostProcessor 的子接口。
 
@@ -55,7 +153,7 @@ InstantiationAwareBeanPostProcessor 是 BeanPostProcessor 的子接口。
 	}
 ```
 
-hasInstantiationAwareBeanPostProcessors() 就是判断是否有相应的 实现
+hasInstantiationAwareBeanPostProcessors() 就是判断是否有相应的实现
 
 ```java
 	/**
@@ -135,4 +233,8 @@ public class MyAddressInstantiationAwareBeanPostProcessor implements Instantiati
 
 InitializingBean, DisposableBean 接口是控制 Bean 的初始化和销毁的。
 
-BeanPostProcessor(InstantiationAwareBeanPostProcessor) 的 postProcessBeforeInstantiation，postProcessAfterInstantiation 是控制 Bean 的实例化前后的动作。
+实现了 BeanPostProcessor 那么所有 Bean 的创建都会回调对应的方法，需要判断是否是相应的 Bean 再进行处理。
+
+InstantiationAwareBeanPostProcessor 的 postProcessBeforeInstantiation，postProcessAfterInstantiation 是控制 Bean 的实例化( instantiate )前后的动作。
+
+如果被 InstantiationAwareBeanPostProcessor 接管了，@PostConstruct, InitializingBean, @PreDestroy, DisposableBean 这些注解就不会生效。(因为没有被 Spring-boot 容器管理)
